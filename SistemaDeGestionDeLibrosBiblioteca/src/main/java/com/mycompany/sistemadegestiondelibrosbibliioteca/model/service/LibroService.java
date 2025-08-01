@@ -8,38 +8,31 @@ package com.mycompany.sistemadegestiondelibrosbibliioteca.model.service;
  *
  * @author gian_
  */
-import com.mycompany.sistemadegestiondelibrosbibliioteca.config.DatabaseConfig;
-import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dao.LibroDAO;
+import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dao.ILibroDAO;
+import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dao.LibroDAOImpl;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dto.LibroDTO;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.model.entity.Libro;
-import java.sql.SQLException;
 import java.util.Optional;
 import java.util.List;
 import java.util.ArrayList;
 
 /**
- * LibroService - Lógica de negocio con JDBC
- * Actualizado para usar tu estructura existente
+ * LibroService - Capa de lógica de negocio
+ * Actualizado para usar el nuevo DAO CRUD con interfaz
  */
 public class LibroService {
 
-    private LibroDAO libroDAO;
+    private ILibroDAO libroDAO;
 
     public LibroService() {
-        this.libroDAO = new LibroDAO();
-        // Asegurar que la conexión esté inicializada
-        try {
-            DatabaseConfig.inicializar();
-        } catch (SQLException e) {
-            System.err.println("❌ Error inicializando base de datos: " + e.getMessage());
-        }
+        this.libroDAO = new LibroDAOImpl();
     }
 
     /**
      * Obtener libro por ID
      */
     public LibroDTO obtenerLibroPorId(Long id) {
-        // Validaciones
+        // Validaciones básicas
         if (id == null) {
             throw new IllegalArgumentException("El ID no puede ser nulo");
         }
@@ -49,17 +42,13 @@ public class LibroService {
         }
 
         try {
-            // Buscar con JDBC
-            Optional<Libro> libroOpt = libroDAO.findById(id);
+            Optional<Libro> libroOpt = libroDAO.read(id);
 
             if (!libroOpt.isPresent()) {
                 throw new RuntimeException("Libro no encontrado con ID: " + id + " (Error 404)");
             }
 
-            Libro libro = libroOpt.get();
-
-            // Convertir a DTO
-            return convertirADTO(libro);
+            return convertirADTO(libroOpt.get());
 
         } catch (Exception e) {
             if (e instanceof IllegalArgumentException || e instanceof RuntimeException) {
@@ -73,7 +62,7 @@ public class LibroService {
      * Agregar nuevo libro
      */
     public LibroDTO agregarLibro(String titulo, String autor, String anoPublicacionStr) {
-        // Validaciones
+        // Validaciones de negocio
         validarTitulo(titulo);
         validarAutor(autor);
         Integer anoPublicacion = validarAnoPublicacion(anoPublicacionStr);
@@ -86,17 +75,70 @@ public class LibroService {
             nuevoLibro.setAnoPublicacion(anoPublicacion);
             nuevoLibro.setDisponible(true);
 
-            // Guardar con JDBC
-            Libro libroGuardado = libroDAO.save(nuevoLibro);
+            // Usar DAO CRUD
+            Libro libroGuardado = libroDAO.create(nuevoLibro);
 
-            // Convertir a DTO
             return convertirADTO(libroGuardado);
 
         } catch (Exception e) {
             if (e instanceof IllegalArgumentException || e instanceof RuntimeException) {
                 throw e;
             }
-            throw new RuntimeException("Error guardando en la base de datos: " + e.getMessage());
+            throw new RuntimeException("Error guardando libro: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Actualizar libro existente
+     */
+    public LibroDTO actualizarLibro(Long id, String titulo, String autor, String anoPublicacionStr) {
+        // Validaciones
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("ID inválido para actualizar");
+        }
+
+        validarTitulo(titulo);
+        validarAutor(autor);
+        Integer anoPublicacion = validarAnoPublicacion(anoPublicacionStr);
+
+        try {
+            // Verificar que existe
+            Optional<Libro> existente = libroDAO.read(id);
+            if (!existente.isPresent()) {
+                throw new RuntimeException("Libro no encontrado para actualizar");
+            }
+
+            // Actualizar datos
+            Libro libro = existente.get();
+            libro.setTitulo(titulo.trim());
+            libro.setAutor(autor.trim());
+            libro.setAnoPublicacion(anoPublicacion);
+
+            // Usar DAO CRUD
+            Libro actualizado = libroDAO.update(libro);
+
+            return convertirADTO(actualizado);
+
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException || e instanceof RuntimeException) {
+                throw e;
+            }
+            throw new RuntimeException("Error actualizando libro: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Eliminar libro por ID
+     */
+    public boolean eliminarLibro(Long id) {
+        if (id == null || id <= 0) {
+            throw new IllegalArgumentException("ID inválido para eliminar");
+        }
+
+        try {
+            return libroDAO.delete(id);
+        } catch (Exception e) {
+            throw new RuntimeException("Error eliminando libro: " + e.getMessage());
         }
     }
 
@@ -105,7 +147,7 @@ public class LibroService {
      */
     public List<LibroDTO> obtenerTodosLosLibros() {
         try {
-            List<Libro> libros = libroDAO.findAll();
+            List<Libro> libros = libroDAO.readAll();
             List<LibroDTO> librosDTO = new ArrayList<>();
 
             for (Libro libro : libros) {
@@ -116,17 +158,6 @@ public class LibroService {
 
         } catch (Exception e) {
             throw new RuntimeException("Error listando libros: " + e.getMessage());
-        }
-    }
-
-    /**
-     * Contar libros
-     */
-    public int contarLibros() {
-        try {
-            return libroDAO.count();
-        } catch (Exception e) {
-            throw new RuntimeException("Error contando libros: " + e.getMessage());
         }
     }
 
