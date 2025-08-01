@@ -23,11 +23,6 @@ public class BibliotecaApp {
     public static void main(String[] args) {
         System.out.println("═══════════════════════════════════════════════════════");
         System.out.println("    📚 SISTEMA DE GESTIÓN DE LIBROS - JDBC + DAO");
-        System.out.println("═══════════════════════════════════════════════════════");
-        System.out.println("🏗️  Arquitectura: MVC (Model-View-Controller)");
-        System.out.println("💾 Base de datos: SQLite (archivo biblioteca.db)");
-        System.out.println("🔗 Conectividad: JDBC");
-        System.out.println("📋 Patrón: DAO (Data Access Object)");
         System.out.println("═══════════════════════════════════════════════════════\n");
 
         BibliotecaView view = new BibliotecaView();
@@ -100,22 +95,6 @@ public class BibliotecaApp {
         mostrarDemo(8, "Validaciones - Año con letras");
         controller.agregarLibro("Libro Test", "Autor Test", "año2023");
 
-        System.out.println("✅ DEMOSTRACIONES COMPLETADAS");
-        System.out.println("═══════════════════════════════════════════");
-        System.out.println("🎯 CONCEPTOS DEMOSTRADOS:");
-        System.out.println("   ✅ Conexión JDBC a SQLite");
-        System.out.println("   ✅ Creación de tabla con SQL");
-        System.out.println("   ✅ INSERT con PreparedStatement");
-        System.out.println("   ✅ SELECT con WHERE");
-        System.out.println("   ✅ SELECT ALL sin WHERE");
-        System.out.println("   ✅ Auto-generated keys (AUTOINCREMENT)");
-        System.out.println("   ✅ Mapeo ResultSet → Objeto");
-        System.out.println("   ✅ DAO encapsulando JDBC");
-        System.out.println("   ✅ Validaciones de negocio");
-        System.out.println("   ✅ Manejo de errores SQL");
-        System.out.println("   ✅ Persistencia en archivo SQLite");
-        System.out.println();
-
         mostrarResumenFinal();
     }
 
@@ -131,28 +110,6 @@ public class BibliotecaApp {
      * Mostrar resumen final
      */
     private static void mostrarResumenFinal() {
-        System.out.println("📋 RESUMEN TÉCNICO:");
-        System.out.println("═══════════════════════════════════════════");
-        System.out.println("🔧 JDBC (Java Database Connectivity):");
-        System.out.println("   • API estándar para conectar Java con BD");
-        System.out.println("   • Connection, PreparedStatement, ResultSet");
-        System.out.println("   • Ejecuta SQL desde Java");
-        System.out.println();
-        System.out.println("📋 DAO (Data Access Object):");
-        System.out.println("   • Patrón que encapsula acceso a datos");
-        System.out.println("   • Separa lógica de negocio de persistencia");
-        System.out.println("   • Operaciones CRUD estándar");
-        System.out.println();
-        System.out.println("💾 SQLite:");
-        System.out.println("   • Base de datos real en archivo");
-        System.out.println("   • Sin servidor, fácil de usar");
-        System.out.println("   • SQL completo soportado");
-        System.out.println();
-        System.out.println("🏗️  Arquitectura MVC:");
-        System.out.println("   • Model: Entity + DTO + DAO + Service");
-        System.out.println("   • View: Presentación e interacción");
-        System.out.println("   • Controller: Coordinación de flujo");
-        System.out.println();
         System.out.println("💾 Archivo generado: biblioteca.db");
         System.out.println("🎯 Datos persistentes entre ejecuciones");
     }
