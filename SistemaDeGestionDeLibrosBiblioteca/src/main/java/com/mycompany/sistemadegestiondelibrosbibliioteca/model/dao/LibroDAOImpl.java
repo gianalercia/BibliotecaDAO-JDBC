@@ -7,10 +7,12 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
+
 public class LibroDAOImpl implements ILibroDAO {
 
     /**
      * CREATE - Insertar nuevo libro
+     * Valida duplicados antes de insertar
      */
     @Override
     public Libro create(Libro libro) {
@@ -24,10 +26,6 @@ public class LibroDAOImpl implements ILibroDAO {
         }
 
         String sql = "INSERT INTO libros (titulo, autor, ano_publicacion, disponible) VALUES (?, ?, ?, ?)";
-
-        System.out.println("🔧 DAO CREATE: Insertando libro...");
-        System.out.println("📝 SQL: " + sql);
-        System.out.println("📚 Datos: " + tituloSanitizado + " - " + autorSanitizado + " (" + libro.getAnoPublicacion() + ")");
 
         try (Connection conn = DatabaseConfig.getConexion();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -46,13 +44,12 @@ public class LibroDAOImpl implements ILibroDAO {
                         libro.setId(rs.getLong(1));
                         libro.setTitulo(tituloSanitizado);
                         libro.setAutor(autorSanitizado);
-                        System.out.println("✅ CREATE exitoso - ID generado: " + libro.getId());
+                        System.out.println("Registros insertados");
                     }
                 }
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Error en CREATE: " + e.getMessage());
             throw new RuntimeException("Error al crear libro: " + e.getMessage());
         }
 
@@ -225,13 +222,12 @@ public class LibroDAOImpl implements ILibroDAO {
             try (ResultSet rs = pstmt.executeQuery()) {
                 boolean existe = rs.next();
                 if (existe) {
-                    System.out.println("⚠️ DUPLICADO DETECTADO: " + tituloSanitizado + " - " + autorSanitizado);
+                    System.out.println("DUPLICADO DETECTADO: " + tituloSanitizado + " - " + autorSanitizado);
                 }
                 return existe;
             }
 
         } catch (SQLException e) {
-            System.err.println("❌ Error verificando duplicados: " + e.getMessage());
             return false;
         }
     }
@@ -240,9 +236,6 @@ public class LibroDAOImpl implements ILibroDAO {
     // MÉTODOS AUXILIARES
     // ========================================================================
 
-    /**
-     * Mapear ResultSet a objeto Libro
-     */
     private Libro mapearResultSet(ResultSet rs) throws SQLException {
         Libro libro = new Libro();
         libro.setId(rs.getLong("id"));
@@ -253,10 +246,6 @@ public class LibroDAOImpl implements ILibroDAO {
         return libro;
     }
 
-    /**
-     * Sanitizar texto de entrada
-     * Elimina caracteres peligrosos y normaliza
-     */
     private String sanitizarTexto(String texto) {
         if (texto == null || texto.trim().isEmpty()) {
             return "";
