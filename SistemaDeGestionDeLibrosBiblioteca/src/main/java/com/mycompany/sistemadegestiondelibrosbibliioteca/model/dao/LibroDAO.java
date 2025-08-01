@@ -8,177 +8,124 @@ package com.mycompany.sistemadegestiondelibrosbibliioteca.model.dao;
  *
  * @author gian_
  */
+import com.mycompany.sistemadegestiondelibrosbibliioteca.config.DatabaseConfig;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.model.entity.Libro;
-import com.mycompany.sistemadegestiondelibrosbibliioteca.config.DatabaseConfig
 import java.sql.*;
-import java.util.ArrayList;
+import java.util.Optional;
 import java.util.List;
+import java.util.ArrayList;
+
 /**
- * LibroDAO - Data Access Object
- */
-/**
- * LibroDAO - Data Access Object para SQLite
- *
- * ¿QUÉ ES DAO?
- * - Patrón de diseño que encapsula el acceso a datos
- * - Separa la lógica de negocio de la persistencia
- * - Define operaciones CRUD: Create, Read, Update, Delete
- *
- * ¿CÓMO USA JDBC?
- * - DAO define QUÉ operaciones hacer (guardar, buscar, etc.)
- * - JDBC define CÓMO acceder a SQLite
- * - DAO usa JDBC internamente para ejecutar SQL
+ * LibroDAO - Data Access Object con JDBC y SQLite
+ * Corregido para funcionar con la estructura existente
  */
 public class LibroDAO {
 
     /**
-     * OPERACIÓN: CREATE (Guardar libro)
-     * SQL: INSERT INTO libros
-     * JDBC: PreparedStatement para evitar SQL injection
-     * SQLite: AUTOINCREMENT para ID automático
+     * Buscar libro por ID usando JDBC
      */
-    public void guardar(Libro libro) throws SQLException {
-        String sql = "INSERT INTO libros (titulo, autor, año) VALUES (?, ?, ?)";
-
-        System.out.println("🔧 DAO ejecutando INSERT en SQLite...");
-        System.out.println("SQL: " + sql);
-
-        // PreparedStatement: JDBC seguro con parámetros
-        try (PreparedStatement pstmt = DatabaseConfig.getConexion().prepareStatement(sql,
-                Statement.RETURN_GENERATED_KEYS)) {
-
-            // Establecer parámetros (evita SQL injection)
-            pstmt.setString(1, libro.getTitulo());
-            pstmt.setString(2, libro.getAutor());
-            pstmt.setInt(3, libro.getAño());
-
-            // Ejecutar INSERT en SQLite
-            int filasAfectadas = pstmt.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                // Obtener ID generado automáticamente por SQLite
-                try (ResultSet rs = pstmt.getGeneratedKeys()) {
-                    if (rs.next()) {
-                        libro.setId(rs.getInt(1));
-                        System.out.println("✅ JDBC: Libro guardado en SQLite con ID " + libro.getId());
-                    }
-                }
-            }
+    public Optional<Libro> findById(Long id) {
+        if (id == null) {
+            return Optional.empty();
         }
-    }
 
-    /**
-     * OPERACIÓN: READ (Buscar por ID)
-     * SQL: SELECT con WHERE
-     * JDBC: PreparedStatement + ResultSet
-     * SQLite: Búsqueda por PRIMARY KEY
-     */
-    public Libro buscarPorId(int id) throws SQLException {
-        String sql = "SELECT id, titulo, autor, año FROM libros WHERE id = ?";
+        String sql = "SELECT id, titulo, autor, ano_publicacion, disponible FROM libros WHERE id = ?";
 
         System.out.println("🔍 DAO ejecutando SELECT en SQLite...");
         System.out.println("SQL: " + sql + " [id=" + id + "]");
 
-        try (PreparedStatement pstmt = DatabaseConfig.getConexion().prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            // Parámetro seguro
-            pstmt.setInt(1, id);
+            pstmt.setLong(1, id);
 
-            // Ejecutar SELECT en SQLite
             try (ResultSet rs = pstmt.executeQuery()) {
-
                 if (rs.next()) {
-                    // Mapear ResultSet a objeto Libro
                     Libro libro = new Libro();
-                    libro.setId(rs.getInt("id"));
+                    libro.setId(rs.getLong("id"));
                     libro.setTitulo(rs.getString("titulo"));
                     libro.setAutor(rs.getString("autor"));
-                    libro.setAño(rs.getInt("año"));
+                    libro.setAnoPublicacion(rs.getInt("ano_publicacion")); // Usar el método correcto
+                    libro.setDisponible(rs.getBoolean("disponible"));
 
                     System.out.println("✅ JDBC: Libro encontrado en SQLite");
-                    return libro;
+                    return Optional.of(libro);
                 } else {
                     System.out.println("❌ JDBC: Libro no encontrado en SQLite");
-                    return null;
+                    return Optional.empty();
                 }
             }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error JDBC en findById: " + e.getMessage());
+            return Optional.empty();
         }
     }
 
     /**
-     * OPERACIÓN: READ ALL (Listar todos)
-     * SQL: SELECT sin WHERE + ORDER BY
-     * JDBC: Statement + ResultSet
-     * SQLite: Orden por ID ascendente
+     * Guardar libro usando JDBC
      */
-    public List<Libro> listarTodos() throws SQLException {
-        String sql = "SELECT id, titulo, autor, año FROM libros ORDER BY id";
-        List<Libro> libros = new ArrayList<>();
+    public Libro save(Libro libro) {
+        if (libro.getId() == null) {
+            return insertarNuevoLibro(libro);
+        } else {
+            return actualizarLibro(libro);
+        }
+    }
 
-        System.out.println("📋 DAO ejecutando SELECT ALL en SQLite...");
+    /**
+     * Insertar nuevo libro
+     */
+    private Libro insertarNuevoLibro(Libro libro) {
+        String sql = "INSERT INTO libros (titulo, autor, ano_publicacion, disponible) VALUES (?, ?, ?, ?)";
+
+        System.out.println("🔧 DAO ejecutando INSERT en SQLite...");
         System.out.println("SQL: " + sql);
 
-        try (Statement stmt = DatabaseConfig.getConexion().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+        try (Connection conn = DatabaseConfig.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            while (rs.next()) {
-                Libro libro = new Libro(
-                        rs.getInt("id"),
-                        rs.getString("titulo"),
-                        rs.getString("autor"),
-                        rs.getInt("año")
-                );
-                libros.add(libro);
+            pstmt.setString(1, libro.getTitulo());
+            pstmt.setString(2, libro.getAutor());
+            pstmt.setInt(3, libro.getAnoPublicacion());
+            pstmt.setBoolean(4, libro.getDisponible());
+
+            int filasAfectadas = pstmt.executeUpdate();
+
+            if (filasAfectadas > 0) {
+                try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                    if (rs.next()) {
+                        libro.setId(rs.getLong(1));
+                        System.out.println("✅ JDBC: Libro guardado en SQLite con ID " + libro.getId());
+                    }
+                }
             }
 
-            System.out.println("✅ JDBC: " + libros.size() + " libros encontrados en SQLite");
+        } catch (SQLException e) {
+            System.err.println("❌ Error JDBC en save: " + e.getMessage());
+            throw new RuntimeException("Error al guardar libro: " + e.getMessage());
         }
 
-        return libros;
+        return libro;
     }
 
     /**
-     * OPERACIÓN: COUNT (Contar registros)
-     * SQL: SELECT COUNT(*)
-     * JDBC: Statement + ResultSet
-     * SQLite: Función de agregación COUNT
+     * Actualizar libro existente
      */
-    public int contarTodos() throws SQLException {
-        String sql = "SELECT COUNT(*) FROM libros";
-
-        System.out.println("🔢 DAO ejecutando COUNT en SQLite...");
-        System.out.println("SQL: " + sql);
-
-        try (Statement stmt = DatabaseConfig.getConexion().createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-
-            if (rs.next()) {
-                int count = rs.getInt(1);
-                System.out.println("✅ JDBC: Total de registros en SQLite = " + count);
-                return count;
-            }
-        }
-
-        return 0;
-    }
-
-    /**
-     * OPERACIÓN: UPDATE (Actualizar libro)
-     * SQL: UPDATE con WHERE
-     * JDBC: PreparedStatement
-     * SQLite: Actualización por PRIMARY KEY
-     */
-    public void actualizar(Libro libro) throws SQLException {
-        String sql = "UPDATE libros SET titulo = ?, autor = ?, año = ? WHERE id = ?";
+    private Libro actualizarLibro(Libro libro) {
+        String sql = "UPDATE libros SET titulo = ?, autor = ?, ano_publicacion = ?, disponible = ? WHERE id = ?";
 
         System.out.println("📝 DAO ejecutando UPDATE en SQLite...");
         System.out.println("SQL: " + sql + " [id=" + libro.getId() + "]");
 
-        try (PreparedStatement pstmt = DatabaseConfig.getConexion().prepareStatement(sql)) {
+        try (Connection conn = DatabaseConfig.getConexion();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setString(1, libro.getTitulo());
             pstmt.setString(2, libro.getAutor());
-            pstmt.setInt(3, libro.getAño());
-            pstmt.setInt(4, libro.getId());
+            pstmt.setInt(3, libro.getAnoPublicacion());
+            pstmt.setBoolean(4, libro.getDisponible());
+            pstmt.setLong(5, libro.getId());
 
             int filasAfectadas = pstmt.executeUpdate();
 
@@ -187,33 +134,71 @@ public class LibroDAO {
             } else {
                 System.out.println("❌ JDBC: Libro no encontrado para actualizar");
             }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error JDBC en actualizar: " + e.getMessage());
+            throw new RuntimeException("Error al actualizar libro: " + e.getMessage());
         }
+
+        return libro;
     }
 
     /**
-     * OPERACIÓN: DELETE (Eliminar por ID)
-     * SQL: DELETE con WHERE
-     * JDBC: PreparedStatement
-     * SQLite: Eliminación por PRIMARY KEY
+     * Contar total de libros
      */
-    public boolean eliminar(int id) throws SQLException {
-        String sql = "DELETE FROM libros WHERE id = ?";
+    public int count() {
+        String sql = "SELECT COUNT(*) FROM libros";
 
-        System.out.println("🗑️ DAO ejecutando DELETE en SQLite...");
-        System.out.println("SQL: " + sql + " [id=" + id + "]");
+        System.out.println("🔢 DAO ejecutando COUNT en SQLite...");
+        System.out.println("SQL: " + sql);
 
-        try (PreparedStatement pstmt = DatabaseConfig.getConexion().prepareStatement(sql)) {
-            pstmt.setInt(1, id);
+        try (Connection conn = DatabaseConfig.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
 
-            int filasAfectadas = pstmt.executeUpdate();
-
-            if (filasAfectadas > 0) {
-                System.out.println("✅ JDBC: Libro eliminado de SQLite");
-                return true;
-            } else {
-                System.out.println("❌ JDBC: Libro no encontrado para eliminar");
-                return false;
+            if (rs.next()) {
+                int count = rs.getInt(1);
+                System.out.println("✅ JDBC: Total de registros en SQLite = " + count);
+                return count;
             }
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error JDBC en count: " + e.getMessage());
         }
+
+        return 0;
+    }
+
+    /**
+     * Obtener todos los libros
+     */
+    public List<Libro> findAll() {
+        String sql = "SELECT id, titulo, autor, ano_publicacion, disponible FROM libros ORDER BY id";
+        List<Libro> libros = new ArrayList<>();
+
+        System.out.println("📋 DAO ejecutando SELECT ALL en SQLite...");
+        System.out.println("SQL: " + sql);
+
+        try (Connection conn = DatabaseConfig.getConexion();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+
+            while (rs.next()) {
+                Libro libro = new Libro();
+                libro.setId(rs.getLong("id"));
+                libro.setTitulo(rs.getString("titulo"));
+                libro.setAutor(rs.getString("autor"));
+                libro.setAnoPublicacion(rs.getInt("ano_publicacion"));
+                libro.setDisponible(rs.getBoolean("disponible"));
+                libros.add(libro);
+            }
+
+            System.out.println("✅ JDBC: " + libros.size() + " libros encontrados en SQLite");
+
+        } catch (SQLException e) {
+            System.err.println("❌ Error JDBC en findAll: " + e.getMessage());
+        }
+
+        return libros;
     }
 }

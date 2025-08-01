@@ -8,84 +8,131 @@ package com.mycompany.sistemadegestiondelibrosbibliioteca.model.service;
  *
  * @author gian_
  */
+import com.mycompany.sistemadegestiondelibrosbibliioteca.config.DatabaseConfig;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dao.LibroDAO;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dto.LibroDTO;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.model.entity.Libro;
-
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.sql.SQLException;
 import java.util.Optional;
+import java.util.List;
+import java.util.ArrayList;
 
 /**
- * LibroService - Capa de lógica de negocio
- * Contiene TODAS las validaciones y reglas de negocio
- * Convierte entre Entity y DTO
- * Maneja todas las excepciones de negocio
+ * LibroService - Lógica de negocio con JDBC
+ * Actualizado para usar tu estructura existente
  */
 public class LibroService {
+
     private LibroDAO libroDAO;
 
     public LibroService() {
         this.libroDAO = new LibroDAO();
+        // Asegurar que la conexión esté inicializada
+        try {
+            DatabaseConfig.inicializar();
+        } catch (SQLException e) {
+            System.err.println("❌ Error inicializando base de datos: " + e.getMessage());
+        }
     }
 
+    /**
+     * Obtener libro por ID
+     */
     public LibroDTO obtenerLibroPorId(Long id) {
-        // ID no puede ser nulo
+        // Validaciones
         if (id == null) {
             throw new IllegalArgumentException("El ID no puede ser nulo");
         }
 
-        // ID debe ser positivo
         if (id <= 0) {
-            throw new IllegalArgumentException("El ID debe ser un número positivo");
+            throw new IllegalArgumentException("El ID debe ser positivo");
         }
-        // Buscar en la base de datos
-        Optional<Libro> libroOpt = libroDAO.findById(id);
 
-        //  Libro debe existir (Error 404)
-        if (libroOpt.isEmpty()) {
-            throw new RuntimeException("Libro no encontrado con ID: " + id + " (Error 404)");
+        try {
+            // Buscar con JDBC
+            Optional<Libro> libroOpt = libroDAO.findById(id);
+
+            if (!libroOpt.isPresent()) {
+                throw new RuntimeException("Libro no encontrado con ID: " + id + " (Error 404)");
+            }
+
+            Libro libro = libroOpt.get();
+
+            // Convertir a DTO
+            return convertirADTO(libro);
+
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException || e instanceof RuntimeException) {
+                throw e;
+            }
+            throw new RuntimeException("Error accediendo a la base de datos: " + e.getMessage());
         }
-        Libro libro = libroOpt.get();
-
-        // Convertir Entity a DTO (ocultar campo disponible)
-        return convertirADTO(libro);
     }
 
-    public List<LibroDTO> obtenerTodosLosLibros() {
-        Map<Long, Libro> todosLosLibros = libroDAO.findAll();
-        List<LibroDTO> librosDTO = new ArrayList<>();
-
-        for (Libro libro : todosLosLibros.values()) {
-            librosDTO.add(convertirADTO(libro));
-        }
-
-        return librosDTO;
-    }
-
+    /**
+     * Agregar nuevo libro
+     */
     public LibroDTO agregarLibro(String titulo, String autor, String anoPublicacionStr) {
-        // Ejecutar TODAS las validaciones de negocio
+        // Validaciones
         validarTitulo(titulo);
         validarAutor(autor);
-        validarAnoPublicacion(anoPublicacionStr); // Validar como String
+        Integer anoPublicacion = validarAnoPublicacion(anoPublicacionStr);
 
-        // Convertir a Integer (ya validado)
-        Integer anoPublicacion = Integer.parseInt(anoPublicacionStr);
+        try {
+            // Crear entidad
+            Libro nuevoLibro = new Libro();
+            nuevoLibro.setTitulo(titulo.trim());
+            nuevoLibro.setAutor(autor.trim());
+            nuevoLibro.setAnoPublicacion(anoPublicacion);
+            nuevoLibro.setDisponible(true);
 
-        // Crear nueva entidad
-        Libro nuevoLibro = new Libro();
-        nuevoLibro.setTitulo(titulo.trim());
-        nuevoLibro.setAutor(autor.trim());
-        nuevoLibro.setAnoPublicacion(anoPublicacion);
-        nuevoLibro.setDisponible(true); // Por defecto disponible
+            // Guardar con JDBC
+            Libro libroGuardado = libroDAO.save(nuevoLibro);
 
-        // Guardar en la base de datos
-        Libro libroGuardado = libroDAO.save(nuevoLibro);
+            // Convertir a DTO
+            return convertirADTO(libroGuardado);
 
-        // Convertir a DTO para retornar
-        return convertirADTO(libroGuardado);
+        } catch (Exception e) {
+            if (e instanceof IllegalArgumentException || e instanceof RuntimeException) {
+                throw e;
+            }
+            throw new RuntimeException("Error guardando en la base de datos: " + e.getMessage());
+        }
     }
+
+    /**
+     * Obtener todos los libros
+     */
+    public List<LibroDTO> obtenerTodosLosLibros() {
+        try {
+            List<Libro> libros = libroDAO.findAll();
+            List<LibroDTO> librosDTO = new ArrayList<>();
+
+            for (Libro libro : libros) {
+                librosDTO.add(convertirADTO(libro));
+            }
+
+            return librosDTO;
+
+        } catch (Exception e) {
+            throw new RuntimeException("Error listando libros: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Contar libros
+     */
+    public int contarLibros() {
+        try {
+            return libroDAO.count();
+        } catch (Exception e) {
+            throw new RuntimeException("Error contando libros: " + e.getMessage());
+        }
+    }
+
+    // ========================================================================
+    // MÉTODOS PRIVADOS DE VALIDACIÓN
+    // ========================================================================
 
     private void validarTitulo(String titulo) {
         if (titulo == null || titulo.trim().isEmpty()) {
@@ -100,7 +147,7 @@ public class LibroService {
             throw new IllegalArgumentException("El título no puede exceder 200 caracteres");
         }
     }
-    
+
     private void validarAutor(String autor) {
         if (autor == null || autor.trim().isEmpty()) {
             throw new IllegalArgumentException("El autor no puede estar vacío");
@@ -113,30 +160,13 @@ public class LibroService {
         if (autor.trim().length() > 100) {
             throw new IllegalArgumentException("El autor no puede exceder 100 caracteres");
         }
-
-        // El autor no debe contener números
-        if (autor.matches(".*\\d.*")) {
-            throw new IllegalArgumentException("El autor no puede contener números");
-        }
-
-        // El autor solo debe contener letras, espacios y algunos caracteres especiales
-        if (!autor.matches("^[a-zA-ZáéíóúÁÉÍÓÚñÑüÜ\\s\\.\\-']+$")) {
-            throw new IllegalArgumentException("El autor solo puede contener letras, espacios, puntos, guiones y apostrofes");
-        }
     }
 
-    private void validarAnoPublicacion(String anoPublicacionStr) {
-        // VALIDACIÓN 1: No nulo o vacío
+    private Integer validarAnoPublicacion(String anoPublicacionStr) {
         if (anoPublicacionStr == null || anoPublicacionStr.trim().isEmpty()) {
             throw new IllegalArgumentException("El año de publicación no puede estar vacío");
         }
 
-        // VALIDACIÓN 2: No contiene letras
-        if (anoPublicacionStr.matches(".*[a-zA-Z].*")) {
-            throw new IllegalArgumentException("El año de publicación no puede contener letras");
-        }
-
-        // VALIDACIÓN 3: Es número válido
         Integer anoPublicacion;
         try {
             anoPublicacion = Integer.parseInt(anoPublicacionStr.trim());
@@ -144,30 +174,31 @@ public class LibroService {
             throw new IllegalArgumentException("El año de publicación debe ser un número válido");
         }
 
-        // VALIDACIÓN 4: Número positivo
         if (anoPublicacion <= 0) {
             throw new IllegalArgumentException("El año de publicación debe ser válido");
         }
 
-        // VALIDACIÓN 5: No futuro
         int anoActual = java.time.Year.now().getValue();
         if (anoPublicacion > anoActual) {
             throw new IllegalArgumentException("El año de publicación no puede ser futuro");
         }
 
-        // VALIDACIÓN 6: Rango razonable
         if (anoPublicacion < 1000) {
             throw new IllegalArgumentException("El año de publicación debe ser desde el año 1000");
         }
+
+        return anoPublicacion;
     }
 
+    /**
+     * Convertir Entity a DTO
+     */
     private LibroDTO convertirADTO(Libro libro) {
         return new LibroDTO(
                 libro.getId(),
                 libro.getTitulo(),
                 libro.getAutor(),
                 libro.getAnoPublicacion()
-                // Nota: NO se incluye el campo 'disponible'
         );
     }
 }

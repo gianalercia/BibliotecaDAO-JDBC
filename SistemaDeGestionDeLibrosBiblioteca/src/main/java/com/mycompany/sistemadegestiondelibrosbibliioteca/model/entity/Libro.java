@@ -30,7 +30,7 @@ public class Libro {
     }
     
     // Getters y Setters
-    public int getId() {
+    public Long getId() {
         return id;
     }
     

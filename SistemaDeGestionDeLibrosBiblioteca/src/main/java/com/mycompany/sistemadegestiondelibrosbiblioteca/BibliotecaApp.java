@@ -8,99 +8,152 @@ package com.mycompany.sistemadegestiondelibrosbiblioteca;
  *
  * @author gian_
  */
-import com.mycompany.sistemadegestiondelibrosbibliioteca.controller.LibroController;
-import com.mycompany.sistemadegestiondelibrosbibliioteca.model.dao.LibroDAO;
-import com.mycompany.sistemadegestiondelibrosbibliioteca.model.entity.Libro;
-import com.mycompany.sistemadegestiondelibrosbibliioteca.view.BibliotecaView;
 import com.mycompany.sistemadegestiondelibrosbibliioteca.config.DatabaseConfig;
-
+import com.mycompany.sistemadegestiondelibrosbibliioteca.controller.LibroController;
+import com.mycompany.sistemadegestiondelibrosbibliioteca.view.BibliotecaView;
 
 /**
  * BibliotecaApp - Aplicación principal
+ * Demuestra JDBC + DAO + SQLite con tu estructura MVC
  *
- * ENDPOINTS REST:
- * GET  /libros/{id}  - Obtener DTO de libro por ID
- * POST /libros       - Crear nuevo libro
+ * @author gian_
  */
 public class BibliotecaApp {
 
     public static void main(String[] args) {
-        System.out.println("=== DEMOSTRACIÓN JDBC + DAO + SQLite ===");
-        System.out.println("Base de datos: SQLite (archivo .db)\n");
+        System.out.println("═══════════════════════════════════════════════════════");
+        System.out.println("    📚 SISTEMA DE GESTIÓN DE LIBROS - JDBC + DAO");
+        System.out.println("═══════════════════════════════════════════════════════");
+        System.out.println("🏗️  Arquitectura: MVC (Model-View-Controller)");
+        System.out.println("💾 Base de datos: SQLite (archivo biblioteca.db)");
+        System.out.println("🔗 Conectividad: JDBC");
+        System.out.println("📋 Patrón: DAO (Data Access Object)");
+        System.out.println("═══════════════════════════════════════════════════════\n");
+
+        BibliotecaView view = new BibliotecaView();
 
         try {
-            // Inicializar conexión JDBC y crear BD SQLite
+            // 1. Inicializar base de datos SQLite con JDBC
+            System.out.println("🔄 INICIALIZANDO SISTEMA...");
             DatabaseConfig.inicializar();
             DatabaseConfig.mostrarEstadoBaseDatos();
             System.out.println();
 
-            // Crear DAO (usa JDBC internamente)
-            LibroDAO libroDAO = new LibroDAO();
+            // 2. Crear controlador MVC
+            LibroController controller = new LibroController(view);
+            System.out.println("✅ Controlador MVC inicializado");
+            System.out.println("✅ Sistema listo para usar\n");
 
-            // === DEMOSTRACIONES ===
+            // 3. Ejecutar demostraciones JDBC + DAO
+            ejecutarDemostracionesJDBC(controller, view);
 
-            // 1. INSERT con JDBC + SQLite
-            System.out.println("1️⃣ INSERTANDO LIBROS (INSERT SQL en SQLite)");
-            Libro libro1 = new Libro("El Quijote", "Cervantes", 1605);
-            Libro libro2 = new Libro("1984", "George Orwell", 1949);
-            Libro libro3 = new Libro("Cien años de soledad", "García Márquez", 1967);
-
-            libroDAO.guardar(libro1);
-            libroDAO.guardar(libro2);
-            libroDAO.guardar(libro3);
-            System.out.println("✅ Libros insertados en SQLite\n");
-
-            // 2. SELECT con JDBC + SQLite
-            System.out.println("2️⃣ BUSCANDO LIBROS (SELECT SQL en SQLite)");
-            Libro encontrado = libroDAO.buscarPorId(1);
-            if (encontrado != null) {
-                System.out.println("📖 Encontrado: " + encontrado);
-            }
-
-            Libro noEncontrado = libroDAO.buscarPorId(999);
-            if (noEncontrado == null) {
-                System.out.println("❌ Libro ID 999 no existe en SQLite");
-            }
-            System.out.println();
-
-            // 3. COUNT con JDBC + SQLite
-            System.out.println("3️⃣ CONTANDO REGISTROS (COUNT SQL en SQLite)");
-            int total = libroDAO.contarTodos();
-            System.out.println("📊 Total de libros en SQLite: " + total + "\n");
-
-            // 4. SELECT ALL con JDBC + SQLite
-            System.out.println("4️⃣ LISTANDO TODOS (SELECT ALL SQL en SQLite)");
-            for (Libro libro : libroDAO.listarTodos()) {
-                System.out.println("📚 " + libro);
-            }
-            System.out.println();
-
-            // 5. UPDATE con JDBC + SQLite
-            System.out.println("5️⃣ ACTUALIZANDO LIBRO (UPDATE SQL en SQLite)");
-            if (encontrado != null) {
-                encontrado.setTitulo("Don Quijote de la Mancha");
-                libroDAO.actualizar(encontrado);
-                System.out.println("📝 Libro actualizado: " + libroDAO.buscarPorId(1));
-            }
-            System.out.println();
-
-            // 6. DELETE con JDBC + SQLite
-            System.out.println("6️⃣ ELIMINANDO LIBRO (DELETE SQL en SQLite)");
-            boolean eliminado = libroDAO.eliminar(2);
-            if (eliminado) {
-                System.out.println("🗑️ Libro ID 2 eliminado de SQLite");
-                System.out.println("📊 Libros restantes: " + libroDAO.contarTodos());
-            }
-            System.out.println();
-
-            System.out.println("🎯 DEMOSTRACIÓN COMPLETADA");
-            System.out.println("💾 Todos los datos están guardados en: biblioteca.db");
+            // 4. Sistema interactivo (en este trabajo no lo uso)
+            // view.ejecutarSistemaInteractivo(controller);
 
         } catch (Exception e) {
-            System.err.println("❌ Error: " + e.getMessage());
+            System.err.println("❌ Error en la aplicación: " + e.getMessage());
             e.printStackTrace();
         } finally {
+            // Cerrar conexión JDBC
             DatabaseConfig.cerrarConexion();
         }
+    }
+
+    /**
+     * Ejecutar demostraciones de JDBC + DAO
+     */
+    private static void ejecutarDemostracionesJDBC(LibroController controller, BibliotecaView view) {
+        System.out.println("🧪 EJECUTANDO DEMOSTRACIONES JDBC + DAO");
+        System.out.println("═══════════════════════════════════════════");
+
+        // Demostración 1: INSERT - Agregar libros
+        mostrarDemo(1, "INSERT con JDBC - Agregar libros");
+        controller.agregarLibro("El Quijote", "Miguel de Cervantes", "1605");
+        controller.agregarLibro("1984", "George Orwell", "1949");
+        controller.agregarLibro("Cien años de soledad", "Gabriel García Márquez", "1967");
+
+        // Demostración 2: SELECT - Buscar libro por ID
+        mostrarDemo(2, "SELECT con JDBC - Buscar libro existente");
+        controller.obtenerLibro(1L);
+
+        // Demostración 3: SELECT - Libro no encontrado
+        mostrarDemo(3, "SELECT con JDBC - Libro no encontrado");
+        controller.obtenerLibro(999L);
+
+        // Demostración 4: Validaciones - ID nulo
+        mostrarDemo(4, "Validaciones - ID nulo");
+        controller.obtenerLibro(null);
+
+        // Demostración 5: Validaciones - Datos inválidos
+        mostrarDemo(5, "Validaciones - Título vacío");
+        controller.agregarLibro("", "Autor Test", "2023");
+
+        // Demostración 6: SELECT ALL - Listar todos los libros
+        mostrarDemo(6, "SELECT ALL con JDBC - Listar todos");
+        controller.listarTodosLosLibros();
+
+        // Demostración 7: Agregar libro con año inválido
+        mostrarDemo(7, "Validaciones - Año futuro");
+        controller.agregarLibro("Libro del Futuro", "Autor Futurista", "2050");
+
+        // Demostración 8: Agregar libro con año como texto
+        mostrarDemo(8, "Validaciones - Año con letras");
+        controller.agregarLibro("Libro Test", "Autor Test", "año2023");
+
+        System.out.println("✅ DEMOSTRACIONES COMPLETADAS");
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("🎯 CONCEPTOS DEMOSTRADOS:");
+        System.out.println("   ✅ Conexión JDBC a SQLite");
+        System.out.println("   ✅ Creación de tabla con SQL");
+        System.out.println("   ✅ INSERT con PreparedStatement");
+        System.out.println("   ✅ SELECT con WHERE");
+        System.out.println("   ✅ SELECT ALL sin WHERE");
+        System.out.println("   ✅ Auto-generated keys (AUTOINCREMENT)");
+        System.out.println("   ✅ Mapeo ResultSet → Objeto");
+        System.out.println("   ✅ DAO encapsulando JDBC");
+        System.out.println("   ✅ Validaciones de negocio");
+        System.out.println("   ✅ Manejo de errores SQL");
+        System.out.println("   ✅ Persistencia en archivo SQLite");
+        System.out.println();
+
+        mostrarResumenFinal();
+    }
+
+    /**
+     * Mostrar encabezado de demostración
+     */
+    private static void mostrarDemo(int numero, String descripcion) {
+        System.out.println("🔬 DEMO " + numero + ": " + descripcion);
+        System.out.println("─────────────────────────────────────────────────────");
+    }
+
+    /**
+     * Mostrar resumen final
+     */
+    private static void mostrarResumenFinal() {
+        System.out.println("📋 RESUMEN TÉCNICO:");
+        System.out.println("═══════════════════════════════════════════");
+        System.out.println("🔧 JDBC (Java Database Connectivity):");
+        System.out.println("   • API estándar para conectar Java con BD");
+        System.out.println("   • Connection, PreparedStatement, ResultSet");
+        System.out.println("   • Ejecuta SQL desde Java");
+        System.out.println();
+        System.out.println("📋 DAO (Data Access Object):");
+        System.out.println("   • Patrón que encapsula acceso a datos");
+        System.out.println("   • Separa lógica de negocio de persistencia");
+        System.out.println("   • Operaciones CRUD estándar");
+        System.out.println();
+        System.out.println("💾 SQLite:");
+        System.out.println("   • Base de datos real en archivo");
+        System.out.println("   • Sin servidor, fácil de usar");
+        System.out.println("   • SQL completo soportado");
+        System.out.println();
+        System.out.println("🏗️  Arquitectura MVC:");
+        System.out.println("   • Model: Entity + DTO + DAO + Service");
+        System.out.println("   • View: Presentación e interacción");
+        System.out.println("   • Controller: Coordinación de flujo");
+        System.out.println();
+        System.out.println("💾 Archivo generado: biblioteca.db");
+        System.out.println("🎯 Datos persistentes entre ejecuciones");
     }
 }
